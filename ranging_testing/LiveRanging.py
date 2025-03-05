@@ -1,42 +1,42 @@
-from ctypes import *
-import math
-import time
-import matplotlib.pyplot as plt
-import sys
-import numpy
-from os import sep
+from WF_SDK import device, scope, wavegen, tools, error   # import instruments
+import matplotlib.pyplot as plt   # needed for plotting
+import matplotlib
+# matplotlib.use('TkAgg')
+from time import sleep     
 
+if __name__ == "__main__":
+    # Open the device
+    try: 
+        device_data = device.open()
+    except device.error as e:
+        print(e)
+        exit(1)
+    
+    print(device_data.name)
+    scope.open(device_data)   # open the scope
+    # set up triggering on scope channel 1
+    scope.trigger(device_data, enable=True, source=scope.trigger_source.analog, channel=2, level=0, edge_rising=True)
+    # record data with the scope on channel 1
+    buffer = scope.record(device_data, channel=2)
 
-# load the dynamic library, get constants path (the path is OS specific)
-if sys.platform.startswith("win"):
-    # on Windows
-    dwf = cdll.dwf
-    constants_path = "C:" + sep + "Program Files (x86)" + sep + "Digilent" + sep + "WaveFormsSDK" + sep + "samples" + sep + "py"
-elif sys.platform.startswith("darwin"):
-    # on macOS
-    lib_path = sep + "Library" + sep + "Frameworks" + sep + "dwf.framework" + sep + "dwf"
-    dwf = cdll.LoadLibrary(lib_path)
-    constants_path = sep + "Applications" + sep + "WaveForms.app" + sep + "Contents" + sep + "Resources" + sep + "SDK" + sep + "samples" + sep + "py"
-else:
-    # on Linux
-    dwf = cdll.LoadLibrary("libdwf.so")
-    constants_path = sep + "usr" + sep + "share" + sep + "digilent" + sep + "waveforms" + sep + "samples" + sep + "py"
-if sys.platform.startswith("win"):
-    dwf = cdll.dwf
-    print("library loaded")
-elif sys.platform.startswith("darwin"):
-    dwf = cdll.LoadLibrary("/Library/Frameworks/dwf.framework/dwf")
-else:
-    dwf = cdll.LoadLibrary("libdwf.so")
+    # limit displayed data size
+    # length = len(buffer)
+    # buffer = buffer[0:length]
 
-# import constants
-sys.path.append(constants_path)
-import dwfconstants as constants
+    print("Buffer length: ", len(buffer))
 
-from WD_SDK import AD2
-from WF_SDK import scope
+    # generate buffer for time moments
+    time = []
+    for index in range(len(buffer)):
+        time.append(index * 1e03 / scope.data.sampling_frequency)   # convert time to ms
 
+    # plot
+    plt.plot(time, buffer)
+    plt.xlabel("time [ms]")
+    plt.ylabel("voltage [V]")
+    plt.show()
 
+    
 
 
 
