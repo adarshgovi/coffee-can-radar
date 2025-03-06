@@ -57,7 +57,6 @@ def open(device_data, sampling_frequency=20e06, buffer_size=0, offset=0, amplitu
     # set global variables
     data.sampling_frequency = sampling_frequency
     data.max_buffer_size = device_data.analog.input.max_buffer_size
-
     # enable all channels
     if dwf.FDwfAnalogInChannelEnableSet(device_data.handle, ctypes.c_int(-1), ctypes.c_bool(True)) == 0:
         check_error()
@@ -110,11 +109,13 @@ def measure(device_data, channel):
     if dwf.FDwfAnalogInStatusSample(device_data.handle, ctypes.c_int(channel - 1), ctypes.byref(voltage)) == 0:
         check_error()
     
+    
     # store the result as float
     voltage = voltage.value
     return voltage
 
 """-----------------------------------------------------------------------"""
+
 
 def trigger(device_data, enable, source=trigger_source.none, channel=1, timeout=0, edge_rising=True, level=0):
     """
@@ -165,6 +166,45 @@ def trigger(device_data, enable, source=trigger_source.none, channel=1, timeout=
         if dwf.FDwfAnalogInTriggerSourceSet(device_data.handle, constants.trigsrcNone) == 0:
             check_error()
     return
+
+
+def concurrent_record(device_data):
+    """
+        record an analog signal
+
+        parameters: - device data
+                    - the selected oscilloscope channel (1-2, or 1-4)
+
+        returns:    - a list with the recorded voltages
+    """
+    # set up the instrument
+    if dwf.FDwfAnalogInConfigure(device_data.handle, ctypes.c_bool(False), ctypes.c_bool(True)) == 0:
+        check_error()
+    
+    # read data to an internal buffer
+    while True:
+        status = ctypes.c_byte()    # variable to store buffer status
+        if dwf.FDwfAnalogInStatus(device_data.handle, ctypes.c_bool(True), ctypes.byref(status)) == 0:
+            check_error()
+    
+        # check internal buffer status
+        if status.value == constants.DwfStateDone.value:
+                # exit loop when ready
+                break
+    
+    # copy buffer
+    buffer_ch1 = (ctypes.c_double * data.buffer_size)()   # create an empty buffer
+    if dwf.FDwfAnalogInStatusData(device_data.handle, ctypes.c_int(0), buffer_ch1, ctypes.c_int(data.buffer_size)) == 0:
+        check_error()
+
+    buffer_ch2 = (ctypes.c_double * data.buffer_size)()   # create an empty buffer
+    if dwf.FDwfAnalogInStatusData(device_data.handle, ctypes.c_int(1), buffer_ch2, ctypes.c_int(data.buffer_size)) == 0:
+        check_error()
+    
+    # convert into list
+    buffer_ch1 = [float(element) for element in buffer_ch1]
+    buffer_ch2 = [float(element) for element in buffer_ch2]
+    return buffer_ch1, buffer_ch2
 
 """-----------------------------------------------------------------------"""
 

@@ -13,10 +13,11 @@ if __name__ == "__main__":
         exit(1)
     
     print(device_data.name)
-    scope.open(device_data)   # open the scope
+    scope.open(device_data, sampling_frequency=100000)   # open the scope
     # set up triggering on scope channel 1
     scope.trigger(device_data, enable=True, source=scope.trigger_source.analog, channel=2, level=0, edge_rising=True)
     # record data with the scope on channel 1
+    
     buffer = scope.record(device_data, channel=2)
 
     # limit displayed data size
