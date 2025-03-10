@@ -93,6 +93,17 @@ def update_graphs(n, time_relayout, fft_relayout, pause_data, connection_data):
     fft_fig.update_layout(title="Frequency Spectrum", xaxis_title="Frequency (Hz)", yaxis_title="Magnitude")
 
     return time_fig, fft_fig
+@app.callback(
+    [Output("peak-freq", "children"), Output("peak-distance", "children")],
+    [Input("interval-component", "n_intervals")],
+    [State("device-connection", "data"), State("pause-state", "data")]
+)
+def update_peak_values(n, connection_data, pause_data):
+    if not connection_data["connected"] or pause_data["paused"]:
+        raise dash.exceptions.PreventUpdate  # Stop updates when disconnected or paused
+
+    peak_freq, peak_distance = data_fetcher.get_peak_data()
+    return f"{peak_freq:.2f} Hz", f"{peak_distance:.2f} m"
 
 # Callback to toggle pause/resume
 @app.callback(

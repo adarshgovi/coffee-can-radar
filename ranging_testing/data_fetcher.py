@@ -13,15 +13,16 @@ device_data = None
 connected = False
 
 # Constants for frequency-to-distance conversion
-SPEED_OF_WAVE = 3e8  # Example: Speed of wave in meters/second (adjust as needed)
-FREQ_TO_DIST_SCALING = 1  # Modify based on experiment settings
+SPEED_OF_LIGHT = 3e8  # Example: Speed of wave in meters/second (adjust as needed)
+BANDWIDTH = 250e6
+CHIRP_DURATION = 0.02
 
 def connect_device():
     global device_data, connected
     try:
         device_data = device.open()
-        scope.open(device_data, sampling_frequency=200000)
-        scope.trigger(device_data, enable=True, source=scope.trigger_source.analog, channel=2, level=0, edge_rising=True)
+        scope.open(device_data, sampling_frequency=100000)
+        scope.trigger(device_data, enable=True, source=scope.trigger_source.analog, channel=2, level=2, edge_rising=True)
         connected = True
         return True
     except device.error as e:
@@ -38,25 +39,33 @@ def fetch_data():
     while True:
         if connected:
             channel_1, channel_2 = scope.concurrent_record(device_data)
-            t = np.arange(len(channel_1)) * 1e-3 / scope.data.sampling_frequency``
+            t = np.arange(len(channel_1)) / scope.data.sampling_frequency
+
+            # find rising edge for channel 2
+            # rising_edge = np.argmax(channel_2 > 0.5)
+            # channel_1 = channel_1[rising_edge:]
+            # channel_2 = channel_2[rising_edge:]
+            # t = t[rising_edge:]
+
 
             # Compute FFT
             fft_vals = np.abs(np.fft.fft(channel_1))[:len(channel_1)//2]
             fft_freqs = np.fft.fftfreq(len(channel_1), t[1] - t[0])[:len(channel_1)//2]
+            # get frequencies up to 1000 Hz and greater than 0
+            mask = (fft_freqs < 5000)
 
-            # get frequencies up to 1000 Hz
-            mask = fft_freqs < 1000
             fft_freqs = fft_freqs[mask]
             fft_vals = fft_vals[mask]
+            print(fft_freqs)
             
-            # Find peak frequency
+            # # Find peak frequency
             peak_index = np.argmax(fft_vals)  # Index of max FFT magnitude
-            print(peak_index)
+            # print(peak_index)
             peak_freq = fft_freqs[peak_index] if len(fft_freqs) > 0 else 0  # Handle empty case
-            print(peak_freq)
+            # print(peak_freq)
             # Convert frequency to distance
-            peak_distance = (SPEED_OF_WAVE / (2 * peak_freq)) * FREQ_TO_DIST_SCALING if peak_freq > 0 else 0
-
+            peak_distance = (peak_freq * CHIRP_DURATION * SPEED_OF_LIGHT/(2*BANDWIDTH)) * FREQ_TO_DIST_SCALING if peak_freq > 0 else 0
+            # peak_distance, peak_freq = 48.828, 0.586 
             # Store data
             latest_data["time"] = t
             latest_data["ch1"] = channel_1
