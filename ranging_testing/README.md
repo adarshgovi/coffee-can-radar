@@ -13,33 +13,33 @@ This project is a Dash application for viewing live oscilloscope data. It includ
 
 ### 2. Create a Virtual Environment
 
-    ```bash
-    python -m venv .radar_interface_env
-    ```
+```bash
+python -m venv .radar_interface_env
+```
 
 ### 3. Activate the virtual environment
 
-    On Windows:
-    ```bash
-    .radar_interface_env\Scripts\activate
-    ```
+On Windows:
+```bash
+.radar_interface_env\Scripts\activate
+```
 
-    On macOS/Linux:
-    ```bash
-    source .radar_interface_env/bin/activate
-    ```
+On macOS/Linux:
+```bash
+source .radar_interface_env/bin/activate
+```
 
 ### 4. Install the Requirements
 
-    ```bash
-    pip install -r requirements.txt
-    ```
+```bash
+pip install -r requirements.txt
+```
 
 ### 5. Launch the Dash App
 
-    ```bash
-    python ranging_testing/data_ranging.py
-    ```
+```bash
+python ranging_testing/data_ranging.py
+```
 
 ### 6. Access the Application
 
