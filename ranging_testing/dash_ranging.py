@@ -8,13 +8,17 @@ import threading
 import time
 import pandas as pd
 import data_fetcher  # Import the separate data module
+# Constants for frequency-to-distance conversion
+SPEED_OF_LIGHT = 3e8  # Example: Speed of wave in meters/second (adjust as needed)
+BANDWIDTH = 250e6
+CHIRP_DURATION = 0.02
 
 # Initialize Dash app
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 # Layout
 app.layout = dbc.Container([
-    html.H1("Live Oscilloscope Viewer", className="text-center mt-3"),
+    html.H1("Ductenna Live Viewer", className="text-center mt-3"),
 
     # Device Connection Controls
     dbc.Row([
@@ -38,11 +42,26 @@ app.layout = dbc.Container([
         dbc.Col(html.Div(id="peak-distance", className="h4 text-primary"), width="auto"),
     ], justify="center", className="mt-4"),
 
+    # Averaging Number and Heat Map Size Inputs
+    dbc.Row([
+        dbc.Col([
+            dbc.Label("Averaging Number"),
+            dcc.Input(id="averaging-number", type="number", value=10, min=1, step=1, className="m-2")
+        ], width="auto"),
+        dbc.Col([
+            dbc.Label("Heat Map Size"),
+            dcc.Input(id="heat-map-size", type="number", value=10, min=1, step=1, className="m-2")
+        ], width="auto"),
+    ], justify="center", className="mt-4"),
+
     # Time-domain plot
     dcc.Graph(id='time-domain-plot', config={"scrollZoom": True}),
 
     # Frequency-domain plot
     dcc.Graph(id='fft-plot', config={"scrollZoom": True}),
+
+    # Heat map plot
+    dcc.Graph(id='heat-map-plot', config={"scrollZoom": True}),
 
     # Hidden divs for storing state
     dcc.Store(id="pause-state", data={"paused": False}),
@@ -70,16 +89,21 @@ def manage_device_connection(connect_clicks, disconnect_clicks, connection_data)
 
 # Callback to update graphs
 @app.callback(
-    [Output('time-domain-plot', 'figure'), Output('fft-plot', 'figure')],
+    [Output('time-domain-plot', 'figure'), Output('fft-plot', 'figure'), Output('heat-map-plot', 'figure')],
     [Input('interval-component', 'n_intervals')],
     [State('time-domain-plot', 'relayoutData'), State('fft-plot', 'relayoutData'),
-     State('pause-state', 'data'), State('device-connection', 'data')]
+     State('pause-state', 'data'), State('device-connection', 'data'),
+     State('averaging-number', 'value'), State('heat-map-size', 'value')]
 )
-def update_graphs(n, time_relayout, fft_relayout, pause_data, connection_data):
+def update_graphs(n, time_relayout, fft_relayout, pause_data, connection_data, averaging_number, heat_map_size):
     if pause_data["paused"] or not connection_data["connected"]:
         raise dash.exceptions.PreventUpdate  # Stop updating if paused or disconnected
 
-    t, ch1, ch2, fft_freqs, fft_vals = data_fetcher.get_latest_data()
+    # Update latest_data with the new averaging number and heat map size
+    data_fetcher.set_averaging_number(averaging_number)
+    data_fetcher.set_heat_map_size(heat_map_size)
+
+    t, ch1, ch2, fft_freqs, fft_vals, ffts = data_fetcher.get_latest_data()
 
     # Time-domain plot
     time_fig = go.Figure()
@@ -89,10 +113,18 @@ def update_graphs(n, time_relayout, fft_relayout, pause_data, connection_data):
 
     # FFT plot
     fft_fig = go.Figure()
-    fft_fig.add_trace(go.Scatter(x=fft_freqs, y=fft_vals, mode='lines', name='FFT Magnitude'))
-    fft_fig.update_layout(title="Frequency Spectrum", xaxis_title="Frequency (Hz)", yaxis_title="Magnitude")
+    distances = data_fetcher.to_distance(np.array(fft_freqs))
+    fft_fig.add_trace(go.Scatter(x=distances, y=fft_vals, mode='lines', name='FFT Magnitude'))
+    fft_fig.update_layout(title="Frequency Spectrum", xaxis_title="Distance (m)", yaxis_title="Magnitude")
 
-    return time_fig, fft_fig
+    # Heat map plot
+    heat_map_fig = go.Figure(data=go.Heatmap(z=ffts,x = distances, y = np.arange(len(ffts)), colorscale='Viridis'))
+    heat_map_fig.update_layout(title="Distance Heat Map", xaxis_title="Distance (m)", yaxis_title="Time (s)")
+    # make y_axis taller
+    heat_map_fig.update_layout(height=600)
+
+    return time_fig, fft_fig, heat_map_fig
+
 @app.callback(
     [Output("peak-freq", "children"), Output("peak-distance", "children")],
     [Input("interval-component", "n_intervals")],
@@ -125,7 +157,6 @@ def toggle_pause(n_clicks, pause_data):
 )
 def download_csv(n_clicks):
     return data_fetcher.download_csv()
-
 
 # Run the Dash app
 if __name__ == '__main__':

@@ -7,8 +7,8 @@ import threading
 
 # Shared global variables
 latest_data = {
-    "time": [], "ch1": [], "ch2": [], "fft_freqs": [], "fft_vals": [],
-    "peak_freq": 0, "peak_distance": 0
+    "time": [], "ch1": [], "ch2": [], "fft_freqs": [], "fft_vals": [], "peak_distances": [],
+    "peak_freq": 0, "peak_distance": 0, "ffts": [], "averaging_number": 10, "heat_map_size": 10
 }
 device_data = None
 connected = False
@@ -22,7 +22,7 @@ def connect_device():
     global device_data, connected
     try:
         device_data = device.open()
-        wavegen.generate(device_data, channel=1, function=wavegen.function.square, offset=2, frequency=2.5, amplitude=2)
+        # wavegen.generate(device_data, channel=1, function=wavegen.function.square, offset=2, frequency=2.5, amplitude=2)
         scope.open(device_data, sampling_frequency=100000, amplitude_range=10)
         scope.trigger(device_data, enable=True, source=scope.trigger_source.analog, channel=1, level=2, edge_rising=True)
         connected = True
@@ -41,46 +41,52 @@ def disconnect_device():
 def fetch_data():
     while True:
         if connected:
-            # print("starting to record")
+            # Retrieve averaging number and heat map size from latest_data
+            averaging_number = latest_data["averaging_number"]
+            heat_map_size = latest_data["heat_map_size"]
+
+            # Record data
             channel_1, channel_2 = scope.concurrent_record(device_data)
-            # print("recorded data")
-            print(max(channel_1))
             t = np.arange(len(channel_1)) / scope.data.sampling_frequency
 
-            # start a moving window, look for a low to high transition within the window
-            # if found, record the time of the transition
-            # if not found, continue to the next window
             # Define the moving window size (e.g., 100 samples)
             window_size = 10
-            transition_time = None
 
             # Iterate through the data with a moving window
             for i in range(len(channel_1) - window_size):
                 if channel_1[i] < 2 and channel_1[i + window_size - 1] >= 2:
                     break
-            pulse_start_index = i+window_size//2
-            pulse_end_index = i+int(CHIRP_DURATION*scope.data.sampling_frequency)+window_size//2+500
+            pulse_start_index = i + window_size // 2
+            pulse_end_index = i + int(CHIRP_DURATION * scope.data.sampling_frequency) + window_size // 2 + 500
             sq_wave = channel_1[pulse_start_index:pulse_end_index]
             receive_signal = channel_2[pulse_start_index:pulse_end_index]
 
             # Compute FFT
-            print("computing fft")
-            fft_vals = np.abs(np.fft.fft(receive_signal))[:len(receive_signal)//2]
-            fft_freqs = np.fft.fftfreq(len(receive_signal), t[1] - t[0])[:len(receive_signal)//2]
-            # get frequencies up to 1000 Hz and greater than 0
+            fft_vals = np.abs(np.fft.fft(receive_signal))[:len(receive_signal) // 2]
+            fft_freqs = np.fft.fftfreq(len(receive_signal), t[1] - t[0])[:len(receive_signal) // 2]
             mask = (fft_freqs < 5000)
 
             fft_freqs = fft_freqs[mask]
             fft_vals = fft_vals[mask]
-            # print(fft_freqs)
-            
-            # # Find peak frequency
-            peak_index = np.argmax(fft_vals)  # Index of max FFT magnitude
-            # print(peak_index)
-            peak_freq = fft_freqs[peak_index] if len(fft_freqs) > 0 else 0  # Handle empty case
-            # print(peak_freq)
-            # Convert frequency to distance
-            peak_distance = (peak_freq * CHIRP_DURATION * SPEED_OF_LIGHT/(2*BANDWIDTH)) if peak_freq > 0 else 0
+            print(len(fft_vals))
+
+            # Find peak frequency
+            peak_index = np.argmax(fft_vals)
+            peak_freq = fft_freqs[peak_index] if len(fft_freqs) > 0 else 0
+            peak_distance = peak_freq
+            # Update peak distances list
+            latest_data["peak_distances"].append(peak_distance)
+            if len(latest_data["peak_distances"]) > averaging_number:
+                latest_data["peak_distances"].pop(0)
+
+            # Compute average peak distance
+            average_peak_distance = np.mean(latest_data["peak_distances"])
+
+            # Update FFTs list
+            latest_data["ffts"].append(fft_vals.tolist())
+            if heat_map_size:
+                if len(latest_data["ffts"]) > heat_map_size:
+                    latest_data["ffts"].pop(0)
 
             # Store data
             latest_data["time"] = t
@@ -89,7 +95,7 @@ def fetch_data():
             latest_data["fft_freqs"] = fft_freqs.tolist()
             latest_data["fft_vals"] = fft_vals.tolist()
             latest_data["peak_freq"] = peak_freq
-            latest_data["peak_distance"] = peak_distance
+            latest_data["peak_distance"] = average_peak_distance
 
         time.sleep(0.5)
     else:
@@ -98,8 +104,11 @@ def fetch_data():
 # Start background thread
 threading.Thread(target=fetch_data, daemon=True).start()
 
+def to_distance(frequency):
+    return frequency * (CHIRP_DURATION * SPEED_OF_LIGHT / (2 * BANDWIDTH))
+
 def get_latest_data():
-    return latest_data["time"], latest_data["ch1"], latest_data["ch2"], latest_data["fft_freqs"], latest_data["fft_vals"]
+    return latest_data["time"], latest_data["ch1"], latest_data["ch2"], latest_data["fft_freqs"], latest_data["fft_vals"], latest_data["ffts"]
 
 def get_peak_data():
     return latest_data["peak_freq"], latest_data["peak_distance"]
@@ -115,3 +124,10 @@ def download_csv():
         "Peak Distance (m)": [latest_data["peak_distance"]]
     })
     return dcc.send_data_frame(df.to_csv, "oscilloscope_data.csv")
+
+# Setter methods to update averaging_number and heat_map_size
+def set_averaging_number(value):
+    latest_data["averaging_number"] = value
+
+def set_heat_map_size(value):
+    latest_data["heat_map_size"] = value
