@@ -2,3 +2,7 @@ ranging_testing/__pycache__/
 ranging_testing/.ductenna_env/
 ranging_testing/WF_SDK/__pycache__/
 ranging_testing/WF_SDK/protocol/__pycache__/
+DuctennaVisualizer/ductenna_backend/WF_SDK/__pycache__/
+DuctennaVisualizer/ductenna_backend/WF_SDK/protocol/__pycache__/
+DuctennaVisualizer/.ductenna_env/
+DuctennaVisualizer/data/
