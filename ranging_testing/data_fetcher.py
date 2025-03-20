@@ -56,8 +56,8 @@ def fetch_data():
             for i in range(len(channel_1) - window_size):
                 if channel_1[i] < 2 and channel_1[i + window_size - 1] >= 2:
                     break
-            pulse_start_index = i + window_size // 2
-            pulse_end_index = i + int(CHIRP_DURATION * scope.data.sampling_frequency) + window_size // 2 + 500
+            pulse_start_index = i + window_size // 2 + 5
+            pulse_end_index = i + int(CHIRP_DURATION * scope.data.sampling_frequency) + window_size // 2 + 5
             sq_wave = channel_1[pulse_start_index:pulse_end_index]
             receive_signal = channel_2[pulse_start_index:pulse_end_index]
 

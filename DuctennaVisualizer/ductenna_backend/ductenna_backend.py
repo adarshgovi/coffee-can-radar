@@ -64,7 +64,7 @@ if __name__ == "__main__":
             print("attempting to connect")
             if scope.connect_device():
                 scope.configure_scope()
-                scope.start_test_wavegen()
+                # scope.start_test_wavegen()
                 r.set("scope_status", "True")
                 print("scope connected")
             else:
@@ -106,8 +106,8 @@ if __name__ == "__main__":
             # print(f"pulse end index: {pulse_end_index}")
 
             # take fft of chirp and get distance from fft
-            chirp = ch1_data[pulse_start_index:pulse_end_index]
-            square_wave = ch2_data[pulse_start_index:pulse_end_index]
+            square_wave = ch1_data[pulse_start_index:pulse_end_index]
+            chirp = ch2_data[pulse_start_index:pulse_end_index]
             chirp_times = reading_times[pulse_start_index:pulse_end_index]
 
             distances, fft_freqs, magnitude = duct_ranger.get_distances(chirp)
@@ -116,3 +116,25 @@ if __name__ == "__main__":
             cutoff_magnitudes = magnitude[cutoff_mask]
             r.xadd("distance_measurement", {"data": json.dumps({"distances": distances.tolist(), "fft_freqs": fft_freqs.tolist(), "fft_vals": magnitude.tolist(), "cutoff_magnitudes": cutoff_magnitudes.tolist(), "cutoff_distances": cutoff_distances.tolist()})}, maxlen=1000)
 
+
+            recent_entries = r.xrevrange("distance_measurement", count=heat_map_size)
+            heatmap = []
+            for entry_id, entry_data in reversed(recent_entries):  # Reverse to maintain chronological order
+                data = json.loads(entry_data[b"data"])
+                distances = np.array(data["distances"])
+                magnitudes = np.array(data["fft_vals"])
+                # Apply the distance cutoff mask dynamically
+                cutoff_mask = distances < distance_cutoff
+                cropped_magnitudes = magnitudes[cutoff_mask]
+
+                heatmap.append(cropped_magnitudes)
+            
+            heatmap = np.array(heatmap)
+            # Push the heatmap data to Redis
+            r.xadd(
+                "heatmap_data",
+                {
+                    "data": json.dumps({"heatmap": heatmap.tolist()})
+                },
+                maxlen=100
+            )

@@ -25,6 +25,10 @@ class Ranger:
         fft_freqs = np.fft.fftfreq(len(chirp), 1 / self.sampling_frequency)[:len(chirp) // 2]
         # fft_freqs = fft_freqs.tolist()
         # fft_vals = fft_vals.tolist()
+        # convert vals to db
+        fft_vals = 20 * np.log10(fft_vals)
+        
+
         distances = self.to_distance(fft_freqs)
         return distances, fft_freqs, fft_vals
     
@@ -36,3 +40,4 @@ class Ranger:
         peak_freq = distances[peak_index] if len(distances) > 0 else 0
         peak_distance = self.to_distance(peak_freq)
         return peak_distance
+    

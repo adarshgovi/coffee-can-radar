@@ -18,6 +18,19 @@ app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = html.Div([
     html.H1("Ductenna Dashboard", style={'textAlign': 'center'}),
 
+    # Main Dashboard Layout
+    # main_dashboard_layout = html.Div([
+    #     html.H1("Ductenna Dashboard", style={'textAlign': 'center'}),
+    #     # Existing layout components (raw signal, FFT, heatmap, etc.)
+    #     dcc.Graph(id="raw-scope-plot"),
+    #     dcc.Graph(id="chirp-plot"),
+    #     dcc.Graph(id="fft-plot"),
+    #     dcc.Graph(id="cropped-fft-plot"),
+    #     dcc.Graph(id="heatmap-plot"),
+    #     dcc.Interval(id="data-update-interval", interval=1500, disabled=False)  # Enable updates for this page
+    # ]),
+
+
     # Connection Controls
     html.Div([
         html.Button("Connect", id="connect-btn", n_clicks=0),
@@ -103,7 +116,7 @@ def update_plots(n_intervals):
         chirp_fig.add_trace(go.Scatter
         (x=chirp_times, y=sync_pulse, mode='lines', name='Square Wave'))
         chirp_fig.update_layout(title="Cropped Single Chirp", xaxis_title="Time (s)", yaxis_title="Voltage (V)")
-        chirp_fig.update_yaxes(range=[0, 5])
+        chirp_fig.update_yaxes(range=[-3, 5])
 
         # show raw ch1 and ch2 data
         raw_scope_fig = go.Figure()
@@ -111,7 +124,7 @@ def update_plots(n_intervals):
         raw_scope_fig.add_trace(go.Scatter(x=reading_times, y=ch2, mode='lines', name='Ch2'))
         raw_scope_fig.update_layout(title="Raw Ch1 and Ch2 Data", xaxis_title="Time (s)", yaxis_title="Voltage (V)")
         # set range for y axis
-        raw_scope_fig.update_yaxes(range=[-0.5, 5])
+        raw_scope_fig.update_yaxes(range=[-3, 5])
     
     distance_measurement = r.xrevrange("distance_measurement", count=1)
     if distance_measurement:
@@ -127,22 +140,18 @@ def update_plots(n_intervals):
         distances = np.arange(len(fft_vals))
         fft_fig.add_trace(go.Scatter
         (x=distances, y=fft_vals, mode='lines', name='FFT Magnitude'))
-        fft_fig.update_layout(title="Frequency Spectrum", xaxis_title="Distance (m)", yaxis_title="Magnitude")
+        fft_fig.update_layout(title="Frequency Spectrum", xaxis_title="Distance (m)", yaxis_title="Magnitude (dB)")
 
         cropped_fft_fig = go.Figure()
         cropped_fft_fig.add_trace(go.Scatter(x=cutoff_distances, y=cutoff_magnitudes, mode='lines', name='FFT Magnitude'))
-        cropped_fft_fig.update_layout(title="Cropped Frequency Spectrum", xaxis_title="Distance (m)", yaxis_title="Magnitude")
+        cropped_fft_fig.update_layout(title="Cropped Frequency Spectrum", xaxis_title="Distance (m)", yaxis_title="Magnitude (dB)")
 
 
-    heatmap_array = r.xrevrange("heatmap_array", count=1)
+    heatmap_array = r.xrevrange("heatmap_data", count=1)
     if heatmap_array:
-        heatmap_array = heatmap_array[0][1]
-        heatmap_array = json.loads(heatmap_array['data'])
-        distances = heatmap_array['distances']
-        ffts = heatmap_array['ffts']
-        time = heatmap_array['time']
-
-        heatmap_fig = go.Figure(data=go.Heatmap(z=ffts,x = distances, y = np.arange(len(ffts)), colorscale='Viridis'))
+        heatmap_data = json.loads(heatmap_array[0][1]["data"])
+        heatmap = np.array(heatmap_data["heatmap"])  # Convert back to a NumPy array
+        heatmap_fig = go.Figure(data=go.Heatmap(z=heatmap, y = np.arange(len(ffts)), colorscale='Viridis'))
         heatmap_fig.update_layout(title="Distance Heat Map", xaxis_title="Distance (m)", yaxis_title="Time (s)")
         heatmap_fig.update_layout(height=600)
     
@@ -256,11 +265,11 @@ def handle_recording_buttons(start_clicks, stop_clicks):
 
     button_id = ctx.triggered_id
     if button_id == "start-record-btn":
-        r.set("record_data", "True")  # Set recording to True in Redis
+        r.set("recording_data", "True")  # Set recording to True in Redis
         print("Recording started")
         return 
     elif button_id == "stop-record-btn":
-        r.set("record_data", "False")  # Set recording to False in Redis
+        r.set("recording_data", "False")  # Set recording to False in Redis
         print("Recording stopped")
         return 
     return
