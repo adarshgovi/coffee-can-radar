@@ -1,7 +1,5 @@
 import numpy as np
 import pandas as pd
-
-
 class Ranger:
     def __init__(self, chirp_duration, bandwidth, sampling_frequency):
         self.chirp_duration = chirp_duration
