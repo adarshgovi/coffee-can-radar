@@ -34,23 +34,19 @@ app.layout = html.Div([
 
     # Number Inputs for Averaging
     html.Div([
-        dcc.Input(id="ranging-averaging", type="number", placeholder="Enter Avg 1"),
-        html.Button("Confirm 1", id="confirm-btn-1", n_clicks=0),
-        dcc.Input(id="heatmap-sizing", type="number", placeholder="Enter Avg 2"),
-        html.Button("Confirm 2", id="confirm-btn-2", n_clicks=0),
+        dcc.Input(id="ranging-averaging", type="number", placeholder="Enter Ranging Averaging"),
+        html.Button("Confirm Averaging", id="ranging-avg-confirm-btn", n_clicks=0),
+        dcc.Input(id="heatmap-sizing", type="number", placeholder="Enter Heat Map Size (num chirps)"),
+        html.Button("Confirm Heatmap Sizing", id="heat-map-confirm-btn", n_clicks=0),
+        dcc.Input(id="distance-cutoff", type="number", placeholder="Enter Distance Cutoff (m)"),
+        html.Button("Confirm FFT X Cutoff", id="distance-cutoff-confirm-btn", n_clicks=0),
     ], style={'display': 'flex', 'justify-content': 'center', 'gap': '10px', 'marginTop': '10px'}),
 
     # Live Plots
-    dcc.Graph( id="scope-plot", figure={
-            "data": [
-                {"x": [], "y": [], "type": "scatter", "name": "Chirp"},
-                {"x": [], "y": [], "type": "scatter", "name": "Square Wave"}
-            ],
-            "layout": {"title": "Scope Plot"}
-        }
-    ),
-
+    dcc.Graph( id="raw-scope-plot"),
+    dcc.Graph( id="chirp-plot"),
     dcc.Graph(id="fft-plot"),
+    dcc.Graph(id="cropped-fft-plot"),
     dcc.Graph(id="heatmap-plot"),
 
     # Error Toast (Hidden Initially)
@@ -62,37 +58,97 @@ app.layout = html.Div([
         duration=10000,  # Auto-close in 5 seconds
         icon="danger",
         style={"position": "fixed", "top": "10px", "right": "10px"}
-    ),
+       ),
 
     # Interval Component (Disabled initially)
     dcc.Interval(id="scope-status-check", interval=1000, disabled=False),
-    dcc.Interval(id="data-update-interval", interval=1000, disabled=True)
+    dcc.Interval(id="data-update-interval", interval=1500, disabled=True)
 ])
 
 @app.callback(
-    Output("scope-plot", "figure"),
+    Output("raw-scope-plot", "figure"),
+    Output("chirp-plot", "figure"),
+    Output("fft-plot", "figure"),
+    Output("cropped-fft-plot", "figure"),
+    Output("heatmap-plot", "figure"),
     Input("data-update-interval", "n_intervals"),
     prevent_initial_call=True
 )
 def update_plots(n_intervals):
+    raw_scope_fig = None
+    chirp_fig = None
+    fft_fig = {}
+    heatmap_fig = {}
+    cropped_fft_fig = {}
+
     # Fetch data from Redis
-    print("updating plots")
     scope_measurement = r.xrevrange("scope_measurement", count=1)
-    print(scope_measurement)
     if scope_measurement:
-        # print("got data")
+        # read data from redis
         scope_measurement = scope_measurement[0][1]
         scope_measurement = json.loads(scope_measurement['data'])
-        chirp = scope_measurement['chirp']
-        square_wave = scope_measurement['square_wave']
+        ch1 = scope_measurement['ch1']
+        ch2 = scope_measurement['ch2']
+        reading_times = scope_measurement['reading_times']
+        pulse_start_index = scope_measurement['pulse_start_index']
+        pulse_end_index = scope_measurement['pulse_end_index']
+        
+        sync_pulse = ch1[pulse_start_index:pulse_end_index]
+        chirp = ch2[pulse_start_index:pulse_end_index]
+        chirp_times = reading_times[pulse_start_index:pulse_end_index]
 
-        # Plot Chirp
-        time = np.arange(len(chirp)) / 100000
-        return {
-            "x": [[time], [time]],
-            "y": [[chirp], [square_wave]],
-        }, [0,1]
-    print("no data")
+        # Create time-domain plot
+        chirp_fig = go.Figure()
+        chirp_fig.add_trace(go.Scatter(x=chirp_times, y=chirp, mode='lines', name='Chirp'))
+        chirp_fig.add_trace(go.Scatter
+        (x=chirp_times, y=sync_pulse, mode='lines', name='Square Wave'))
+        chirp_fig.update_layout(title="Cropped Single Chirp", xaxis_title="Time (s)", yaxis_title="Voltage (V)")
+        chirp_fig.update_yaxes(range=[0, 5])
+
+        # show raw ch1 and ch2 data
+        raw_scope_fig = go.Figure()
+        raw_scope_fig.add_trace(go.Scatter(x=reading_times, y=ch1, mode='lines', name='Ch1'))
+        raw_scope_fig.add_trace(go.Scatter(x=reading_times, y=ch2, mode='lines', name='Ch2'))
+        raw_scope_fig.update_layout(title="Raw Ch1 and Ch2 Data", xaxis_title="Time (s)", yaxis_title="Voltage (V)")
+        # set range for y axis
+        raw_scope_fig.update_yaxes(range=[-0.5, 5])
+    
+    distance_measurement = r.xrevrange("distance_measurement", count=1)
+    if distance_measurement:
+        distance_measurement = distance_measurement[0][1]
+        distance_measurement = json.loads(distance_measurement['data'])
+        distances = distance_measurement['distances']
+        fft_vals = distance_measurement['fft_vals']
+        ffts = distance_measurement['fft_freqs']
+        cutoff_distances = distance_measurement['cutoff_distances']
+        cutoff_magnitudes = distance_measurement['cutoff_magnitudes']
+
+        fft_fig = go.Figure()
+        distances = np.arange(len(fft_vals))
+        fft_fig.add_trace(go.Scatter
+        (x=distances, y=fft_vals, mode='lines', name='FFT Magnitude'))
+        fft_fig.update_layout(title="Frequency Spectrum", xaxis_title="Distance (m)", yaxis_title="Magnitude")
+
+        cropped_fft_fig = go.Figure()
+        cropped_fft_fig.add_trace(go.Scatter(x=cutoff_distances, y=cutoff_magnitudes, mode='lines', name='FFT Magnitude'))
+        cropped_fft_fig.update_layout(title="Cropped Frequency Spectrum", xaxis_title="Distance (m)", yaxis_title="Magnitude")
+
+
+    heatmap_array = r.xrevrange("heatmap_array", count=1)
+    if heatmap_array:
+        heatmap_array = heatmap_array[0][1]
+        heatmap_array = json.loads(heatmap_array['data'])
+        distances = heatmap_array['distances']
+        ffts = heatmap_array['ffts']
+        time = heatmap_array['time']
+
+        heatmap_fig = go.Figure(data=go.Heatmap(z=ffts,x = distances, y = np.arange(len(ffts)), colorscale='Viridis'))
+        heatmap_fig.update_layout(title="Distance Heat Map", xaxis_title="Distance (m)", yaxis_title="Time (s)")
+        heatmap_fig.update_layout(height=600)
+    
+    return raw_scope_fig, chirp_fig, fft_fig, cropped_fft_fig, heatmap_fig
+
+        
 
 @app.callback(
     Output("scope-status-check", "disabled", allow_duplicate=True),
@@ -123,8 +179,8 @@ def update_scope_state(connect_clicks, disconnect_clicks):
     Output("scope-status-check", "disabled"),
     Output("start-record-btn", "disabled"),
     Output("stop-record-btn", "disabled"),
-    Output("error-toast", "is_open"),
-    Output("error-toast", "children"),
+    Output("error-toast", "is_open", allow_duplicate=True),
+    Output("error-toast", "children", allow_duplicate=True),
     Output("scope-status", "children"),  # Update visual indicator
     Output("scope-status", "style"),  # Update color of indicator
     Input("scope-status-check", "n_intervals"),
@@ -145,6 +201,69 @@ def monitor_scope_connection(n_intervals):
         return True, True, True, True, True, status, "🔴 Disconnected", {'textAlign': 'center', 'color': 'red', 'fontWeight': 'bold'}
     return dash.no_update
 
+@app.callback(
+    Output("error-toast", "is_open", allow_duplicate=True),  # Optional: Show a toast for confirmation
+    Output("error-toast", "children", allow_duplicate=True),  # Optional: Update toast message
+    Input("ranging-avg-confirm-btn", "n_clicks"),
+    State("ranging-averaging", "value"),
+    prevent_initial_call=True
+)
+def ranging_avg_button(n_clicks, value):
+    if value is not None:
+        r.set("ranging_averaging", value)  # Store the value in Redis
+        print(f"Set ranging_averaging to {value}")
+        return True, f"Ranging Averaging set to {value}"
+    return False, ""
+
+
+@app.callback(
+    Output("error-toast", "is_open", allow_duplicate=True),  # Optional: Show a toast for confirmation
+    Output("error-toast", "children", allow_duplicate=True),  # Optional: Update toast message
+    Input("heat-map-confirm-btn", "n_clicks"),
+    State("heatmap-sizing", "value"),
+    prevent_initial_call=True
+)
+def heat_map_size_button(n_clicks, value):
+    if value is not None:
+        r.set("heat_map_size", value)  # Store the value in Redis
+        print(f"Set heatmap_sizing to {value}")
+        return True, f"Heatmap Sizing set to {value}"
+    return False, ""
+
+@app.callback(
+    Output("error-toast", "is_open"),  # Optional: Show a toast for confirmation
+    Output("error-toast", "children"),  # Optional: Update toast message
+    Input("distance-cutoff-confirm-btn", "n_clicks"),
+    State("distance-cutoff", "value"),
+    prevent_initial_call=True
+)
+def distance_cutoff_button(n_clicks, value):
+    if value is not None:
+        r.set("distance_cutoff", value)
+        print(f"Set distance_cutoff to {value}")
+        return True, f"FFT X Cutoff set to {value}"
+    return False, ""
+
+@app.callback(
+    Input("start-record-btn", "n_clicks"),
+    Input("stop-record-btn", "n_clicks"),
+    prevent_initial_call=True
+)
+def handle_recording_buttons(start_clicks, stop_clicks):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return False, ""
+
+    button_id = ctx.triggered_id
+    if button_id == "start-record-btn":
+        r.set("record_data", "True")  # Set recording to True in Redis
+        print("Recording started")
+        return 
+    elif button_id == "stop-record-btn":
+        r.set("record_data", "False")  # Set recording to False in Redis
+        print("Recording stopped")
+        return 
+    return
 
 if __name__ == "__main__":
     app.run(debug=True)

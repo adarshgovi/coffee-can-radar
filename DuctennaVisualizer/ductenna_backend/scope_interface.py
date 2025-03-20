@@ -33,3 +33,7 @@ class ScopeInterface:
             t = np.arange(len(channel_1)) / scope.data.sampling_frequency
 
             return channel_1, channel_2, t
+        
+    def start_test_wavegen(self):
+        wavegen.generate(self.device_data, channel=1, function=wavegen.function.square, offset=2, frequency=25, amplitude=2)
+        wavegen.generate(self.device_data, channel=2, function=wavegen.function.sine, offset=2, frequency=25, amplitude=2)

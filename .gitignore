@@ -6,3 +6,6 @@ DuctennaVisualizer/ductenna_backend/WF_SDK/__pycache__/
 DuctennaVisualizer/ductenna_backend/WF_SDK/protocol/__pycache__/
 DuctennaVisualizer/.ductenna_env/
 DuctennaVisualizer/data/
+DuctennaVisualizer/sandbox/*
+DuctennaVisualizer/ductenna_backend/recordings
+DuctennaVisualizer/ductenna_backend/scope_testing.py

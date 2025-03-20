@@ -22,7 +22,7 @@ def connect_device():
     global device_data, connected
     try:
         device_data = device.open()
-        # wavegen.generate(device_data, channel=1, function=wavegen.function.square, offset=2, frequency=2.5, amplitude=2)
+        # wavegπen.generate(device_data, channel=1, function=wavegen.function.square, offset=2, frequency=2.5, amplitude=2)
         scope.open(device_data, sampling_frequency=100000, amplitude_range=10)
         scope.trigger(device_data, enable=True, source=scope.trigger_source.analog, channel=1, level=2, edge_rising=True)
         connected = True
@@ -73,7 +73,7 @@ def fetch_data():
             # Find peak frequency
             peak_index = np.argmax(fft_vals)
             peak_freq = fft_freqs[peak_index] if len(fft_freqs) > 0 else 0
-            peak_distance = peak_freq
+            peak_distance = to_distance(peak_freq)
             # Update peak distances list
             latest_data["peak_distances"].append(peak_distance)
             if len(latest_data["peak_distances"]) > averaging_number:
