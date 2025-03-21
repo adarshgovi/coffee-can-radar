@@ -214,47 +214,32 @@ def update_plots(n_intervals):
     heatmap_fig = {}
 
     # Fetch data from Redis
-    chirp_measurement = r.xrevrange("doppler_chirp_measurement", count=1)
-    if chirp_measurement:
-        chirp_measurement = chirp_measurement[0][1]
-        chirp_measurement = json.loads(chirp_measurement['data'])
-        chirp = chirp_measurement['chirp']
-        chirp_times = chirp_measurement['chirp_times']
-        sync_pulse = chirp_measurement['sync_pulse']
-
-        # Create time-domain plot
-        chirp_fig = go.Figure()
-        chirp_fig.add_trace(go.Scatter(x=chirp_times, y=chirp, mode='lines', name='Chirp'))
-        chirp_fig.add_trace(go.Scatter(x=chirp_times, y=sync_pulse, mode='lines', name='Square Wave'))
-        chirp_fig.update_layout(title="Cropped Single Chirp", xaxis_title="Time (s)", yaxis_title="Voltage (V)")
-        chirp_fig.update_yaxes(range=[-3, 5])
-
-    distance_measurement = r.xrevrange("doppler_distance_measurement", count=1)
-    if distance_measurement:
-        distance_measurement = distance_measurement[0][1]
-        distance_measurement = json.loads(distance_measurement['data'])
-        distances = distance_measurement['distances']
-        fft_vals = distance_measurement['fft_vals']
-        ffts = distance_measurement['fft_freqs']
-        cutoff_distances = distance_measurement['cutoff_distances']
-        cutoff_magnitudes = distance_measurement['cutoff_magnitudes']
-
+    doppler_fft = r.xrevrange("doppler_fft", count=1)
+    if doppler_fft:
+        doppler_fft = doppler_fft[0][1]
+        doppler_fft = json.loads(doppler_fft['data'])
+        velocities = doppler_fft['velocities']
+        fft_vals = doppler_fft['fft_vals']
+        cropped_velocities = doppler_fft['velocities_cutoff']
+        cropped_fft_vals = doppler_fft['fft_vals_cutoff']
+        
         fft_fig = go.Figure()
         distances = np.arange(len(fft_vals))
         fft_fig.add_trace(go.Scatter(x=distances, y=fft_vals, mode='lines', name='FFT Magnitude'))
         fft_fig.update_layout(title="Frequency Spectrum", xaxis_title="Distance (m)", yaxis_title="Magnitude (dB)")
 
         cropped_fft_fig = go.Figure()
-        cropped_fft_fig.add_trace(go.Scatter(x=cutoff_distances, y=cutoff_magnitudes, mode='lines', name='FFT Magnitude'))
+        cropped_fft_fig.add_trace(go.Scatter(x=cropped_velocities, y=cropped_fft_vals, mode='lines', name='FFT Magnitude'))
         cropped_fft_fig.update_layout(title="Cropped Frequency Spectrum", xaxis_title="Distance (m)", yaxis_title="Magnitude (dB)")
 
     heatmap_array = r.xrevrange("doppler_heatmap_data", count=1)
     if heatmap_array:
         heatmap_data = json.loads(heatmap_array[0][1]["data"])
         heatmap = np.array(heatmap_data["heatmap"])
-        heatmap_fig = go.Figure(data=go.Heatmap(z=heatmap, y = np.arange(len(ffts)), colorscale='Viridis'))
-        heatmap_fig.update_layout(title="Distance Heat Map", xaxis_title="Distance (m)", yaxis_title="Time (s)")
+        heatmap_fig = go.Figure(data=go.Heatmap(z=heatmap, y = np.arange(len(cropped_velocities)), colorscale='Viridis'))
+        heatmap_fig.update_layout(title="Velocity Heatmap", xaxis_title="Distance (m)", yaxis_title="Time (s)")
         heatmap_fig.update_layout(height=600)
+
     return chirp_fig, fft_fig, cropped_fft_fig, heatmap_fig
 
 @app.callback(
