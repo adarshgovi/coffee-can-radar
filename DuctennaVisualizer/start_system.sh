@@ -11,12 +11,15 @@ docker-compose up -d
 sleep 2  # Adjust based on startup time
 
 # Step 3: Start the Sensor Logger (Backend)
-echo "Starting Sensor Logger..."
+echo "Starting Scope Readings and Ranging..."
 python ductenna_backend/ductenna_backend.py &
 
 # Step 4: Start the Dash App (Frontend)
 echo "Starting Visualization Dashboard..."
 python ductenna_frontend/visualizer.py &
+
+echo "Starting Doppler Processing backend..."
+python ductenna_backend/doppler_backend.py & 
 
 # Step 5: Wait for user to terminate
 echo "System started! Press Ctrl+C to stop..."
