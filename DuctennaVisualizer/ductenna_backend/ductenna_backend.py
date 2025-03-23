@@ -20,6 +20,7 @@ if __name__ == "__main__":
     datalogger = duct_datalogger.DuctDatalogger()
     previously_recording = False
     previously_ranging = False
+    previously_sar_recording = False
 
     while True:
         # check whether scope should be connected from redis
@@ -42,6 +43,12 @@ if __name__ == "__main__":
             distance_cutoff = 900
         else:
             distance_cutoff = int(distance_cutoff)
+        
+        position = r.get("position_label")
+        if position is None:
+            position = None
+        else:
+            position = int(position)
 
         record_data = r.get("recording_data")
         if record_data is None:
@@ -108,7 +115,20 @@ if __name__ == "__main__":
                 "reading_times": reading_times.tolist(),
             }
             # print(scope_measurement)
-            r.xadd("scope_measurement", {"data": json.dumps(scope_measurement)}, maxlen=1000)      
+            r.xadd("scope_measurement", {"data": json.dumps(scope_measurement)}, maxlen=1000)
+
+            ch1_data, ch2_data, reading_times = scope.fetch_data()
+            if record_data and not previously_sar_recording:
+                if position is not None:
+                    print("starting SAR recording")
+                    datalogger.sar_record(ch1_data, ch2_data, reading_times, acquisition_time=time.time(), position=position)
+                    previously_sar_recording = True
+            elif not record_data and previously_sar_recording:
+                print("stopping SAR recording")
+                datalogger.stop_sar_recording()
+                previously_sar_recording = False
+            elif record_data and previously_sar_recording:
+                datalogger.sar_log_data(ch1_data, ch2_data, reading_times, acquisition_time=time.time())
             
             # print(f"pulse start index: {pulse_start_index}")
             # print(f"pulse end index: {pulse_end_index}")

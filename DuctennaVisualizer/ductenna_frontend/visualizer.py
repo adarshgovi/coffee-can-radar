@@ -66,6 +66,8 @@ app.layout = html.Div([
         html.Button("Confirm Heatmap Sizing", id="heat-map-confirm-btn", n_clicks=0),
         dcc.Input(id="dist-vel-cutoff", type="number", placeholder="Enter Dist/Vel Cutoff (m or m/s)"),
         html.Button("Confirm FFT X Cutoff", id="distance-cutoff-confirm-btn", n_clicks=0),
+        dcc.Input(id="position-label", type="text", placeholder="Enter Position Label"),
+        html.Button("Confirm Position", id="position-confirm-btn", n_clicks=0),
     ], style={'display': 'flex', 'justify-content': 'center', 'gap': '10px', 'marginTop': '10px'}),
 
     # Live Plots
@@ -333,6 +335,20 @@ def distance_cutoff_button(n_clicks, value):
         r.set("distance_cutoff", value)
         print(f"Set distance_cutoff to {value}")
         return True, f"FFT X Cutoff set to {value}"
+    return False, ""
+
+@app.callback(
+    Output("error-toast", "is_open"),  # Optional: Show a toast for confirmation
+    Output("error-toast", "children"),  # Optional: Update toast message
+    Input("position-confirm-btn", "n_clicks"),
+    State("position-label", "value"),
+    prevent_initial_call=True
+)
+def position_label_button(n_clicks, value):
+    if value is not None:
+        r.set("position_label", value)
+        print(f"Set position_label to {value}")
+        return True, f"Position Label set to {value}"
     return False, ""
 
 @app.callback(

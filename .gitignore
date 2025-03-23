@@ -9,3 +9,4 @@ DuctennaVisualizer/data/
 DuctennaVisualizer/sandbox/*
 DuctennaVisualizer/ductenna_backend/recordings
 DuctennaVisualizer/ductenna_backend/scope_testing.py
+.radar/
