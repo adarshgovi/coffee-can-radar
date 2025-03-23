@@ -25,7 +25,7 @@ if __name__ == "__main__":
     while True:
         # check whether scope should be connected from redis
         desired_state = r.get("scope_desired_state").decode("utf-8")
-        
+
         heat_map_size = r.get("heat_map_size")
         if heat_map_size is None:
             heat_map_size = 10
@@ -117,18 +117,18 @@ if __name__ == "__main__":
             # print(scope_measurement)
             r.xadd("scope_measurement", {"data": json.dumps(scope_measurement)}, maxlen=1000)
 
-            ch1_data, ch2_data, reading_times = scope.fetch_data()
-            if record_data and not previously_sar_recording:
-                if position is not None:
+            if position is not None:
+                ch1_data, ch2_data, reading_times = scope.fetch_data()
+                if record_data and not previously_sar_recording:
                     print("starting SAR recording")
                     datalogger.sar_record(ch1_data, ch2_data, reading_times, acquisition_time=time.time(), position=position)
                     previously_sar_recording = True
-            elif not record_data and previously_sar_recording:
-                print("stopping SAR recording")
-                datalogger.stop_sar_recording()
-                previously_sar_recording = False
-            elif record_data and previously_sar_recording:
-                datalogger.sar_log_data(ch1_data, ch2_data, reading_times, acquisition_time=time.time())
+                elif not record_data and previously_sar_recording:
+                    print("stopping SAR recording")
+                    datalogger.stop_sar_recording()
+                    previously_sar_recording = False
+                elif record_data and previously_sar_recording:
+                    datalogger.sar_log_data(ch1_data, ch2_data, reading_times, acquisition_time=time.time())
             
             # print(f"pulse start index: {pulse_start_index}")
             # print(f"pulse end index: {pulse_end_index}")

@@ -324,8 +324,8 @@ def heat_map_size_button(n_clicks, value):
     return False, ""
 
 @app.callback(
-    Output("error-toast", "is_open"),  # Optional: Show a toast for confirmation
-    Output("error-toast", "children"),  # Optional: Update toast message
+    Output("error-toast", "is_open", allow_duplicate=True),  # Optional: Show a toast for confirmation
+    Output("error-toast", "children", allow_duplicate=True),  # Optional: Update toast message
     Input("distance-cutoff-confirm-btn", "n_clicks"),
     State("dist-vel-cutoff", "value"),
     prevent_initial_call=True
@@ -338,8 +338,8 @@ def distance_cutoff_button(n_clicks, value):
     return False, ""
 
 @app.callback(
-    Output("error-toast", "is_open"),  # Optional: Show a toast for confirmation
-    Output("error-toast", "children"),  # Optional: Update toast message
+    Output("error-toast", "is_open", allow_duplicate=True),  # Optional: Show a toast for confirmation
+    Output("error-toast", "children", allow_duplicate=True),  # Optional: Update toast message
     Input("position-confirm-btn", "n_clicks"),
     State("position-label", "value"),
     prevent_initial_call=True

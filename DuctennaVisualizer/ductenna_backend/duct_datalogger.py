@@ -11,8 +11,9 @@ class DuctDatalogger:
         self.recording = False
         self.sar_recording = False
 
-    def start_recording(self, ch1_data, ch2_data, reading_times, acquisition_time):
+    def start_recording(self, ch1_data, ch2_data, reading_times, acquisition_time, poistion=None):
         # Create a timestamped filename for the recording
+        os.makedirs("recordings", exist_ok=True)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         csv_filename = f"recordings/recording_{timestamp}.csv"
         print(f"Recording to {csv_filename}")
@@ -37,16 +38,16 @@ class DuctDatalogger:
             self.csv_writer.writerow([acquisition_time, reading_times[i], ch1_data[i], ch2_data[i]])
 
     def sar_record(self, ch1_data, ch2_data, reading_times, acquisition_time, position):
-        csv_filename = f"recordings/recording_{position}.csv"
-        print(f"Recording to {csv_filename}")
+        sar_filename = f"recordings/recording_{position}.csv"
+        print(f"Recording to {sar_filename}")
 
         # Open the CSV file and write the header
-        self.sar_file = open(csv_filename, mode='w', newline='')
-        self.sar_writer = csv.writer(self.csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        self.sar_file = open(sar_filename, mode='w', newline='')
+        self.sar_writer = csv.writer(self.sar_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         self.sar_writer.writerow(["Acquisition Time", "Reading Time", "Channel 1", "Channel 2"])
 
         # Write the initial batch of data
-        self.log_data(ch1_data, ch2_data, reading_times, acquisition_time)
+        self.sar_log_data(ch1_data, ch2_data, reading_times, acquisition_time)
         self.sar_recording = True
     
     def sar_log_data(self, ch1_data, ch2_data, reading_times, acquisition_time):
