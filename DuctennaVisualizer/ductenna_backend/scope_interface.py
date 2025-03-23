@@ -15,6 +15,8 @@ class ScopeInterface:
             return True
         except device.error as e:
             print(f"Device connection error: {e}")
+            print("Make sure the scope is connected and waveforms doesn't have control")
+
             return False
 
     def disconnect_device(self):

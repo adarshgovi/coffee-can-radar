@@ -3,7 +3,7 @@ import json
 import numpy as np
 
 SPEED_OF_LIGHT = 3e8
-CENTER_FREQUENCY = 25e6
+CENTER_FREQUENCY = 2.43e9
 SAMPLING_FREQUENCY = 100000
 
 
@@ -33,8 +33,8 @@ if __name__ == "__main__":
             heat_map_size = int(heat_map_size.decode("utf-8"))
         
         # get most recent scope measurement
-        scope_data = r.revrange("scope_data", count=1)
         if ((scope_measurement) and (page=="doppler")):
+            scope_data = r.revrange("scope_data", count=1)
             scope_measurement = scope_measurement[0][1]
             scope_measurement = json.loads(scope_measurement)
             ch1 = scope_measurement["ch1"]

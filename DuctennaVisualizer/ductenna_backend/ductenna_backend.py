@@ -24,7 +24,14 @@ if __name__ == "__main__":
 
     while True:
         # check whether scope should be connected from redis
-        desired_state = r.get("scope_desired_state").decode("utf-8")
+        try:
+            desired_state = r.get("scope_desired_state")
+        except redis.exceptions.ConnectionError:
+            print("Redis connection error, Make sure Redis is running")
+            exit()
+        
+        if desired_state is not None:
+            desired_state = desired_state.decode("utf-8") 
 
         heat_map_size = r.get("heat_map_size")
         if heat_map_size is None:
@@ -70,7 +77,7 @@ if __name__ == "__main__":
                 page = "doppler"
 
         if desired_state is None and not scope.connected:
-            print("no desired state")
+            print("Waiting for connection command from the frontend")
             desired_state = "disconnect"
             r.set("scope_status", "False")
         elif desired_state == "connect" and not scope.connected:
