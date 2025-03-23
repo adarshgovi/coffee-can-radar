@@ -11,6 +11,8 @@ class DuctDatalogger:
     def start_recording(self, ch1_data, ch2_data, reading_times, acquisition_time):
         # Create a timestamped filename for the recording
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        if not os.path.exists("recordings"):
+            os.makedirs("recordings")
         csv_filename = f"recordings/recording_{timestamp}.csv"
         print(f"Recording to {csv_filename}")
 

@@ -207,7 +207,7 @@ def update_plots(n_intervals):
     Input("doppler-update-interval", "n_intervals"),
     prevent_initial_call=True
 )
-def update_plots(n_intervals):
+def update_plots_doppler(n_intervals):
     chirp_fig ={}
     fft_fig = {}
     cropped_fft_fig = {}
