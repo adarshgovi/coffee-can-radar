@@ -27,7 +27,6 @@ ranging_dashboard_layout = html.Div([
 # New Page Layout
 doppler_dashboard_layout = html.Div([
     html.H1("Doppler Dashboard", style={'textAlign': 'center'}),
-    dcc.Graph( id="doppler-chirp-plot"),
     dcc.Graph(id="doppler-fft-plot"),
     dcc.Graph(id="cropped-doppler-fft-plot"),
     dcc.Graph(id="doppler-heatmap-plot"),
@@ -118,7 +117,7 @@ def display_page(pathname):
         return ranging_dashboard_layout
 
 @app.callback(
-    Output("raw-scope-plot", "figure"),
+    Output("raw-scope-plot", "figure", allow_duplicate=True),
     Output("chirp-plot", "figure"),
     Output("fft-plot", "figure"),
     Output("cropped-fft-plot", "figure"),
@@ -200,7 +199,7 @@ def update_plots(n_intervals):
     return raw_scope_fig, chirp_fig, fft_fig, cropped_fft_fig, heatmap_fig
 
 @app.callback(
-    Output("doppler-chirp-plot", "figure"),
+    Output("raw-scope-plot", "figure"),
     Output("doppler-fft-plot", "figure"),
     Output("cropped-doppler-fft-plot", "figure"),
     Output("doppler-heatmap-plot", "figure"),
@@ -208,10 +207,28 @@ def update_plots(n_intervals):
     prevent_initial_call=True
 )
 def update_plots_doppler(n_intervals):
+    raw_scope_fig = {}
     chirp_fig ={}
     fft_fig = {}
     cropped_fft_fig = {}
     heatmap_fig = {}
+
+   # Fetch data from Redis
+    scope_measurement = r.xrevrange("scope_measurement", count=1)
+    if scope_measurement:
+        # read data from redis
+        scope_measurement = scope_measurement[0][1]
+        scope_measurement = json.loads(scope_measurement['data'])
+        ch1 = scope_measurement['ch1']
+        ch2 = scope_measurement['ch2']
+        reading_times = scope_measurement['reading_times']
+        # show raw ch1 and ch2 data
+        raw_scope_fig = go.Figure()
+        raw_scope_fig.add_trace(go.Scatter(x=reading_times, y=ch1, mode='lines', name='Ch1'))
+        raw_scope_fig.add_trace(go.Scatter(x=reading_times, y=ch2, mode='lines', name='Ch2'))
+        raw_scope_fig.update_layout(title="Raw Ch1 and Ch2 Data", xaxis_title="Time (s)", yaxis_title="Voltage (V)")
+        # set range for y axis
+        raw_scope_fig.update_yaxes(range=[-3, 5]) 
 
     # Fetch data from Redis
     doppler_fft = r.xrevrange("doppler_fft", count=1)
@@ -226,21 +243,21 @@ def update_plots_doppler(n_intervals):
         fft_fig = go.Figure()
         distances = np.arange(len(fft_vals))
         fft_fig.add_trace(go.Scatter(x=distances, y=fft_vals, mode='lines', name='FFT Magnitude'))
-        fft_fig.update_layout(title="Frequency Spectrum", xaxis_title="Distance (m)", yaxis_title="Magnitude (dB)")
+        fft_fig.update_layout(title="Frequency Spectrum", xaxis_title="Velocity (m/s)", yaxis_title="Magnitude (dB)")
 
         cropped_fft_fig = go.Figure()
         cropped_fft_fig.add_trace(go.Scatter(x=cropped_velocities, y=cropped_fft_vals, mode='lines', name='FFT Magnitude'))
-        cropped_fft_fig.update_layout(title="Cropped Frequency Spectrum", xaxis_title="Distance (m)", yaxis_title="Magnitude (dB)")
+        cropped_fft_fig.update_layout(title="Cropped Frequency Spectrum", xaxis_title="Velocity (m/s)", yaxis_title="Magnitude (dB)")
 
     heatmap_array = r.xrevrange("doppler_heatmap_data", count=1)
     if heatmap_array:
         heatmap_data = json.loads(heatmap_array[0][1]["data"])
         heatmap = np.array(heatmap_data["heatmap"])
         heatmap_fig = go.Figure(data=go.Heatmap(z=heatmap, y = np.arange(len(cropped_velocities)), colorscale='Viridis'))
-        heatmap_fig.update_layout(title="Velocity Heatmap", xaxis_title="Distance (m)", yaxis_title="Time (s)")
+        heatmap_fig.update_layout(title="Velocity Heatmap", xaxis_title="Velocity (m/s)", yaxis_title="Time (s)")
         heatmap_fig.update_layout(height=600)
 
-    return chirp_fig, fft_fig, cropped_fft_fig, heatmap_fig
+    return raw_scope_fig, fft_fig, cropped_fft_fig, heatmap_fig
 
 @app.callback(
     Output("scope-status-check", "disabled", allow_duplicate=True),
@@ -357,4 +374,4 @@ def handle_recording_buttons(start_clicks, stop_clicks):
     return
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=8060)

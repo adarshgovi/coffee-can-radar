@@ -1,7 +1,7 @@
 #!/bin/bash
 # Step 1: Activate Virtual Environment
 echo "Activating virtual environment..."
-source .ductenna_venv/bin/activate  # Change to match your venv path
+source /Users/adarshgovindan/School/Capstone/CCRadarSim/DuctennaVisualizer/ductenna_backend/.ductenna_env/bin/activate  # Change to match your venv path
 
 # Step 2: Start Redis in Docker (if not already running)
 echo "Starting Redis container..."

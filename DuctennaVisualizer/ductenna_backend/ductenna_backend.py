@@ -20,6 +20,7 @@ if __name__ == "__main__":
     datalogger = duct_datalogger.DuctDatalogger()
     previously_recording = False
     previously_ranging = False
+    previously_doppler = False
 
     while True:
         # check whether scope should be connected from redis
@@ -77,7 +78,7 @@ if __name__ == "__main__":
             print("attempting to connect")
             if scope.connect_device():
                 scope.configure_scope()
-                # scope.start_test_wavegen()
+                scope.start_test_wavegen()
                 r.set("scope_status", "True")
                 print("scope connected")
             else:
@@ -90,13 +91,16 @@ if __name__ == "__main__":
         if scope.connected:
             if ((page == "ranging") and (not previously_ranging)):
                 print("configuring scope for ranging")
+                scope.configure_scope(trigger_level=2)
                 previously_ranging = True
                 previously_doppler = False
             elif ((page == "doppler") and (not previously_doppler)):
                 print("configuring scope for doppler")
+                scope.configure_scope(sampling_frequency=44100, amplitude_range=10)
                 previously_doppler = True
                 previously_ranging = False
 
+            # print("fetching data")
             ch1_data, ch2_data, reading_times = scope.fetch_data()
             if record_data and not previously_recording:
                 print("starting recording")
