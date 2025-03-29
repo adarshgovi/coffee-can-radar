@@ -24,9 +24,10 @@ class ScopeInterface:
             device.close(self.device_data)
             self.connected = False
 
-    def configure_scope(self, sampling_frequency=100000, amplitude_range=10, trigger_level=2):
+    def configure_scope(self, sampling_frequency=100000, amplitude_range=10, trigger_level=None):
         scope.open(self.device_data, sampling_frequency=sampling_frequency, amplitude_range=amplitude_range)
-        scope.trigger(self.device_data, enable=True, source=scope.trigger_source.analog, channel=1, level=trigger_level, edge_rising=True)
+        if trigger_level is not None:
+            scope.trigger(self.device_data, enable=True, source=scope.trigger_source.analog, channel=1, level=trigger_level, edge_rising=True)
     
     def fetch_data(self):
         if self.connected:

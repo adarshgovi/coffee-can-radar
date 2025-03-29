@@ -54,17 +54,76 @@ docker-compose --version
 <!-- section break -->
 
 ## Usage Instructions
-1. Start the Entire System
+### 1. Start the Entire System
 Run the start_system.sh script to start the backend, frontend, and Redis services:
 
 This script performs the following steps:
 
-Activates the virtual environment.
-Starts a Redis container using Docker Compose.
+1. Activates the virtual environment.
+2. Starts a Redis container using Docker Compose.
 Launches the backend processes (ductenna_backend.py and doppler_backend.py).
-Launches the Dash frontend (visualizer.py).
-2. Access the Dash App
-Open your browser and navigate to http://127.0.0.1:8050 to access the visualization dashboard.
-3. Stop the System
-Press Ctrl+C in the terminal to stop the system.
-The script will automatically clean up by stopping the Redis container and deactivating the virtual environment.
+3/ Launches the Dash frontend (visualizer.py).
+### 2. Access the Dash App
+- Open your browser and navigate to http://127.0.0.1:8050 to access the visualization dashboard.
+### 3. Stop the System
+- Press `Ctrl+C` in the terminal to stop the system.
+- The script will automatically clean up by stopping the Redis container and deactivating the virtual environment.
+
+
+## Running Components Separately
+
+1. Start Redis
+Start the Redis container using Docker Compose:
+```bash
+docker-compose up -d
+```
+2. Run the Backend
+- Ranging Backend:
+```bash
+python ductenna_backend/ductenna_backend.py
+```
+- Doppler Backend:
+```bash
+python ductenna_backend/doppler_backend.py
+```
+3. Run the Frontend
+Start the Dash app for visualization:
+```bash
+python ductenna_frontend/visualizer.py
+```
+
+## Project Structure
+```
+DuctennaVisualizer/
+├── ductenna_backend/
+│   ├── ductenna_backend.py       # Backend for ranging data processing
+│   ├── doppler_backend.py        # Backend for Doppler data processing
+│   ├── ranger.py                 # Ranging calculations
+│   ├── duct_datalogger.py        # Data logging functionality
+├── ductenna_frontend/
+│   ├── visualizer.py             # Dash app for visualization
+├── docker-compose.yml            # Docker Compose configuration for Redis
+├── requirements.txt              # Python dependencies
+├── start_system.sh               # Script to start the system
+```
+
+## Key Components
+1. Backend
+Key Components
+1. Backend
+- ductenna_backend.py:
+  - Handles ranging data acquisition and processing.
+  - Computes FFT and generates heatmaps for distance measurements.
+  - Publishes processed data to Redis streams.
+
+- doppler_backend.py:
+  - Handles Doppler data acquisition and processing.
+  - Computes FFT and generates heatmaps for velocity measurements.
+Publishes processed data to Redis streams.
+2. Frontend
+visualizer.py:
+Dash app for real-time visualization.
+Provides two dashboards:
+Ranging Dashboard: Displays raw signals, FFT plots, and distance heatmaps.
+Doppler Dashboard: Displays raw signals, FFT plots, and velocity heatmaps.
+Allows users to configure parameters and control the system.
