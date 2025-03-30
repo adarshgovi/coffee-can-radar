@@ -19,7 +19,7 @@ if __name__ == "__main__":
             page = "home"
         else:
             if page == "/":
-                page = "/ranging"
+                page = "ranging"
             elif page == "/doppler":
                 page = "doppler"
         
@@ -64,7 +64,7 @@ if __name__ == "__main__":
             recent_entries = r.xrevrange("distance_measurement", count=heat_map_size)
             heatmap = []
             for entry_id, entry_data in reversed(recent_entries):  # Reverse to maintain chronological order
-                data = json.loads(entry_data[b"data"])
+                data = json.loads(entry_data["data"])
                 distances = np.array(data["distances"])
                 magnitudes = np.array(data["fft_vals"])
                 # Apply the distance cutoff mask dynamically
