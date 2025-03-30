@@ -101,4 +101,5 @@ This project is developed by undergraduate researchers at UBC as part of the fin
 
 - [MIT Coffee Can Radar](https://ocw.mit.edu/courses/res-ll-003-build-a-small-radar-system-capable-of-sensing-range-doppler-and-synthetic-aperture-radar-imaging-january-iap-2011/)  
 - UBC Engineering Physics (ENPH 479) 
+- Nick Peereboom
 - UBC Department of Physics & Astronomy
