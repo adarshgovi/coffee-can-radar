@@ -9,6 +9,7 @@ SAMPLING_FREQUENCY = 44100
 
 if __name__ == "__main__":
     r = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
+    
     while True:
         page = r.get("current_page")
         if page is None:

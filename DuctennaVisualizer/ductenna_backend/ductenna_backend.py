@@ -1,26 +1,17 @@
 import redis
 import time
 import json
-import numpy as np
 import scope_interface
-import ranger
 import duct_datalogger
-
-# constants 
-SPEED_OF_LIGHT = 3e8
-BANDWIDTH = 250e6
-CHIRP_DURATION = 0.02
-SAMPLING_FREQUENCY = 100000
 
 if __name__ == "__main__":
     # Connect to Redis
     r = redis.Redis(host="localhost", port=6379, db=0)
     scope = scope_interface.ScopeInterface()
-    duct_ranger = ranger.Ranger(CHIRP_DURATION, BANDWIDTH, SAMPLING_FREQUENCY)
     datalogger = duct_datalogger.DuctDatalogger()
     previously_recording = False
-    previously_ranging = False
     previously_sar_recording = False
+    previously_ranging = False
     previously_doppler = False
 
     while True:
@@ -143,42 +134,3 @@ if __name__ == "__main__":
             
             # print(f"pulse start index: {pulse_start_index}")
             # print(f"pulse end index: {pulse_end_index}")
-
-            # take fft of chirp and get distance from fft
-            if page == "ranging":
-                pulse_start_index, pulse_end_index = duct_ranger.get_first_pulse(ch1_data)
-                pulse_indices = {"pulse_start_index": pulse_start_index, "pulse_end_index": pulse_end_index}
-                r.xadd("pulse_indices", {"data": json.dumps(pulse_indices)}, maxlen=1000)
-                print(f"pulse start index: {pulse_start_index}")
-                print(f"pulse end index: {pulse_end_index}")
-                square_wave = ch1_data[pulse_start_index:pulse_end_index]
-                chirp = ch2_data[pulse_start_index:pulse_end_index]
-                chirp_times = reading_times[pulse_start_index:pulse_end_index]
-
-                distances, fft_freqs, magnitude = duct_ranger.get_distances(chirp)
-                cutoff_mask = distances < distance_cutoff
-                cutoff_distances = distances[cutoff_mask]
-                cutoff_magnitudes = magnitude[cutoff_mask]
-                r.xadd("distance_measurement", {"data": json.dumps({"distances": distances.tolist(), "fft_freqs": fft_freqs.tolist(), "fft_vals": magnitude.tolist(), "cutoff_magnitudes": cutoff_magnitudes.tolist(), "cutoff_distances": cutoff_distances.tolist()})}, maxlen=1000)
-
-                recent_entries = r.xrevrange("distance_measurement", count=heat_map_size)
-                heatmap = []
-                for entry_id, entry_data in reversed(recent_entries):  # Reverse to maintain chronological order
-                    data = json.loads(entry_data[b"data"])
-                    distances = np.array(data["distances"])
-                    magnitudes = np.array(data["fft_vals"])
-                    # Apply the distance cutoff mask dynamically
-                    cutoff_mask = distances < distance_cutoff
-                    cropped_magnitudes = magnitudes[cutoff_mask]
-
-                    heatmap.append(cropped_magnitudes)
-                
-                heatmap = np.array(heatmap)
-                # Push the heatmap data to Redis
-                r.xadd(
-                    "heatmap_data",
-                    {
-                        "data": json.dumps({"heatmap": heatmap.tolist()})
-                    },
-                    maxlen=100
-                )

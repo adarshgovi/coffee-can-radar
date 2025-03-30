@@ -18,6 +18,9 @@ python ductenna_backend/ductenna_backend.py &
 echo "Starting Visualization Dashboard..."
 python ductenna_frontend/visualizer.py &
 
+echo "Starting Range Processing backend..."
+python ductenna_backend/range_backend.py &
+
 echo "Starting Doppler Processing backend..."
 python ductenna_backend/doppler_backend.py & 
 
