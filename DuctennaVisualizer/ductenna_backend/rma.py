@@ -83,4 +83,7 @@ class RMA:
             "Kr": Kr,
             "mf_S": mf_S,
             "st_S": st_S,
+            "kstart": kstart,
+            "kstop": kstop,
+            "Ky_even": Ky_even,
         }
