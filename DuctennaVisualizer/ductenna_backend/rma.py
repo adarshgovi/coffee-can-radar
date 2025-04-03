@@ -39,7 +39,8 @@ class RMA:
         self.delta_x = delta_x or feet2meters(2/12.0)
 
     def process(self, sif):
-        N, M = sif.shape
+        N, M = len(sif), len(sif[0])
+
         bandwidth = self.freq_range[1] - self.freq_range[0]
         center_freq = self.freq_range[0] + bandwidth / 2
         Kr = np.linspace((4 * PI/C) * (center_freq - bandwidth/2), (4 * PI/C) * (center_freq + bandwidth/2), M)
@@ -57,13 +58,14 @@ class RMA:
         # Matched filtering
         # phi_mf(K_x, K_r) = Rs * sqrt(K_r^2 + K_x^2)
         Krr, Kxx = np.meshgrid(Kr, Kx)
-        mf_phi = self.Rs * np.sqrt(Krr**2 + Kxx**2)
+        mf_phi = self.Rs * np.sqrt(Krr**2 - Kxx**2)
         mf_S = S * np.exp(1j * mf_phi)
 
         # Stolt interpolation
         kstart, kstop = 73, 108.5
         Ky_even = np.linspace(kstart, kstop, 1024)
-        Ky = np.sqrt(Kr**2 - Kx**2)
+        Ky = mf_phi/self.Rs
+        # Ky = np.sqrt(Krr**2 - Kxx**2)
         st_S = np.zeros((len(Kx), len(Ky_even)), dtype=np.complex128)
         for i in range(len(Kx)):
             interpolation_func = scipy.interpolate.interp1d(Ky[i], mf_S[i], bounds_error=False, fill_value=0)

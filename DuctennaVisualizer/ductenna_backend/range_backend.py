@@ -27,7 +27,7 @@ if __name__ == "__main__":
         if distances is None:
             distance_cutoff = 900
         else:
-            distance_cutoff = int(distances.decode("utf-8"))
+            distance_cutoff = int(distances)
         
         heat_map_size = r.get("heat_map_size")
         if heat_map_size is None:
@@ -49,8 +49,8 @@ if __name__ == "__main__":
             pulse_start_index, pulse_end_index = duct_ranger.get_first_pulse(ch1_data)
             pulse_indices = {"pulse_start_index": pulse_start_index, "pulse_end_index": pulse_end_index}
             r.xadd("pulse_indices", {"data": json.dumps(pulse_indices)}, maxlen=1000)
-            print(f"pulse start index: {pulse_start_index}")
-            print(f"pulse end index: {pulse_end_index}")
+            # print(f"pulse start index: {pulse_start_index}")
+            # print(f"pulse end index: {pulse_end_index}")
             square_wave = ch1_data[pulse_start_index:pulse_end_index]
             chirp = ch2_data[pulse_start_index:pulse_end_index]
             chirp_times = reading_times[pulse_start_index:pulse_end_index]
