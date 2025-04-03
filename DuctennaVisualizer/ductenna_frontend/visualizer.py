@@ -390,4 +390,4 @@ def handle_recording_buttons(start_clicks, stop_clicks):
     return
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8060)
+    app.run(debug=True, port=8050)

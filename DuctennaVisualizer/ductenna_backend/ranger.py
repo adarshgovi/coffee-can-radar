@@ -26,7 +26,7 @@ class Ranger:
         # fft_freqs = fft_freqs.tolist()
         # fft_vals = fft_vals.tolist()
         # convert vals to db
-        fft_vals = 20 * np.log10(fft_vals)
+        # fft_vals = 20 * np.log10(fft_vals)
         
 
         distances = self.to_distance(fft_freqs)
