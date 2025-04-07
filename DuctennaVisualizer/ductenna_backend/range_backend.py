@@ -33,7 +33,7 @@ if __name__ == "__main__":
         if heat_map_size is None:
             heat_map_size = 10
         else:
-            heat_map_size = int(heat_map_size.decode("utf-8"))
+            heat_map_size = int(heat_map_size)
 
         # take fft of chirp and get distance from fft
         if page == "ranging":
